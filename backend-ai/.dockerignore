@@ -1,0 +1,18 @@
+# .dockerignore
+
+# 忽略 Hugging Face 快取 (關鍵！解決你的報錯)
+hf_cache/
+
+# 忽略 Python 產生的暫存檔
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 忽略我們自己訓練的模型 (因為我們已經用 Volume 掛載了，不用打包進去)
+models/
+
+# 忽略虛擬環境 (如果有)
+.venv/
+venv/
+env/

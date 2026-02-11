@@ -1,0 +1,27 @@
+# .gitignore
+
+# 1. 忽略 Python 編譯檔 (垃圾檔)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 2. 忽略虛擬環境
+.venv/
+venv/
+env/
+
+# 3. 忽略 AI 模型與快取
+backend-ai/models/
+*.pkl
+hf_cache/
+
+# 4. 忽略 Docker 掛載的資料庫數據
+retail_pg_data/
+
+# 5. 忽略作業系統產生的檔案
+.DS_Store
+Thumbs.db
+
+# 6. (選用) 如果你有用 .env 存密碼，也要忽略
+.env

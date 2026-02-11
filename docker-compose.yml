@@ -1,0 +1,44 @@
+services:
+  # 資料庫服務：PostgreSQL + pgvector
+  db:
+    image: pgvector/pgvector:pg16  # 直接使用包含 pgvector 的 Postgres 16
+    container_name: retail_db
+    restart: always
+    environment:
+      POSTGRES_USER: admin         # 帳號
+      POSTGRES_PASSWORD: "000" # 密碼 (測試用，正式環境請用 .env)
+      POSTGRES_DB: retail_ops      # 預設資料庫名稱
+    ports:
+      - "5432:5432"                # 開放 port 讓你的電腦 (Host) 可以連進去
+    volumes:
+      - retail_pg_data:/var/lib/postgresql/data  # [重要] 資料持久化掛載，重啟資料還在
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql # 初始化腳本
+    networks:
+      - retail_network
+
+  # AI 微服務
+  backend-ai:
+    build: ./backend-ai          # 告訴它 Dockerfile 在哪裡
+    container_name: retail_ai_core
+    restart: always
+    ports:
+      - "8000:8000"              # 把容器的 8000 對應到本機的 8000
+    volumes:
+      # [重要] 掛載模型資料夾：容器裡訓練好的 .pkl 會直接出現在你 Windows 裡
+      - ./backend-ai/models:/app/models
+      # [重要] 掛載 Hugging Face 的快取資料夾，避免每次重建容器都要重新下載模型
+      - ./backend-ai/hf_cache:/root/.cache/huggingface
+    environment:
+      # 告訴 Python 連線字串 (注意 host 是 'db'，密碼是 '000')
+      DATABASE_URL: postgresql://admin:000@db:5432/retail_ops
+    depends_on:
+      - db                       # 確保資料庫先啟動
+    networks:
+      - retail_network
+
+networks:
+  retail_network:
+    driver: bridge
+
+volumes:
+  retail_pg_data:

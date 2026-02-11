@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+prophet
+pandas
+sqlalchemy
+psycopg2-binary
+joblib
+scikit-learn
+holidays
+sentence-transformers
