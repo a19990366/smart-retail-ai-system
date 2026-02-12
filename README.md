@@ -28,7 +28,8 @@
 - Editor: @uiw/react-md-editor
 
 ## 📂 專案結構 (Project Structure)
-Plaintext
+```
+Root
 .
 ├── backend-ai/
 │   ├── main.py              # FastAPI 主程式 (包含 RAG & Sales API)
@@ -43,6 +44,7 @@ Plaintext
 ├── db-data/
 │   └── init.sql             # 資料庫初始化腳本 (含 HNSW 索引優化)
 └── docker-compose.yml       # 一鍵啟動設定
+```
 
 ## 🚀 快速開始 (Quick Start)
 
