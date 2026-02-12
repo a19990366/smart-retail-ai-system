@@ -77,7 +77,7 @@ async def upload_image(file: UploadFile = File(...)):
 # [Create] 新增文件
 @app.post("/documents/create")
 def create_document(doc: DocumentInput):
-    text_to_embed = f"{doc.title} {doc.title} {doc.category} {doc.outline}"
+    text_to_embed = f"{doc.title} {doc.category} {doc.outline}".lower()
     embedding_vector = embedding_model.encode(text_to_embed, normalize_embeddings=True).tolist()
 
     with engine.begin() as conn:
@@ -101,7 +101,7 @@ def create_document(doc: DocumentInput):
 # [Update] 更新文件
 @app.put("/documents/{doc_id}")
 def update_document(doc_id: int, doc: DocumentInput):
-    text_to_embed = f"{doc.title} {doc.title} {doc.category} {doc.outline}"
+    text_to_embed = f"{doc.title} {doc.category} {doc.outline}".lower()
     embedding_vector = embedding_model.encode(text_to_embed, normalize_embeddings=True).tolist()
 
     with engine.begin() as conn:
@@ -165,9 +165,16 @@ def update_tags(conn, doc_id, tags_list):
 @app.post("/search")
 def search_documents(req: SearchRequest):
     results = []
+    
+    # [關鍵修正 1] 預處理查詢字串：去空白 + 轉小寫
+    # 解決搜尋 "Uber Eats" 但標籤是 "UberEats" 對不上的問題
+    clean_query = req.query.replace(" ", "").lower()
+    
     params = {
         "query": req.query, 
         "exact_query": f"%{req.query}%", 
+        "clean_query": clean_query,             # 用於精準比對標籤 (例如 ubereats)
+        "wildcard_clean": f"%{clean_query}%",   # 用於模糊比對
         "top_k": req.top_k
     }
 
@@ -179,7 +186,7 @@ def search_documents(req: SearchRequest):
 
     # 2. 根據 search_type 決定 SQL
     if req.search_type == "exact":
-        # === [精準模式] 只看標題匹配，按 ID 排序 ===
+        # === [精準模式] (維持不變) ===
         sql = text(f"""
             SELECT d.id, d.title, d.category, d.outline, d.content, d.helpful_count, d.unhelpful_count,
                    1.0 AS score,
@@ -193,18 +200,36 @@ def search_documents(req: SearchRequest):
             LIMIT :top_k
         """)
     else:
-        # === [智能模式] 語義搜尋 + 分類/標題加分 ===
-        query_vec = embedding_model.encode(req.query, normalize_embeddings=True).tolist()
+        # === [智能模式] 向量 + 混合加權 (已修復標籤加分) ===
+        # 這裡用 clean_query 轉向量，效果通常比含空白的好
+        query_vec = embedding_model.encode(clean_query, normalize_embeddings=True).tolist()
         params["query_vec"] = str(query_vec)
         
         sql = text(f"""
             SELECT d.id, d.title, d.category, d.outline, d.content, d.helpful_count, d.unhelpful_count,
                    LEAST(
-                        (1 - (d.embedding <=> :query_vec)) + 
-                        (CASE WHEN d.category ILIKE :query THEN 0.3 ELSE 0 END) + 
-                        (CASE WHEN d.title ILIKE :exact_query THEN 0.1 ELSE 0 END),
+                        (
+                            -- 1. 基礎向量分數
+                            (1 - (d.embedding <=> :query_vec)) + 
+                            
+                            -- 2. 分類加分 (0.3)
+                            (CASE WHEN d.category ILIKE :query THEN 0.3 ELSE 0 END) + 
+                            
+                            -- 3. 標題加分 (0.1)
+                            (CASE WHEN d.title ILIKE :exact_query THEN 0.1 ELSE 0 END) +
+                            
+                            -- 4. [關鍵修正] 標籤加分 (0.4)
+                            -- 使用 EXISTS 檢查該文章是否有任何標籤符合查詢
+                            (CASE WHEN EXISTS (
+                                SELECT 1 FROM tags t2 
+                                JOIN document_tags dt2 ON t2.id = dt2.tag_id 
+                                WHERE dt2.document_id = d.id 
+                                -- 邏輯：標籤轉小寫後 = 查詢 OR 標籤包含查詢
+                                AND (LOWER(t2.name) = :clean_query OR :clean_query ILIKE '%' || LOWER(t2.name) || '%')
+                            ) THEN 0.4 ELSE 0 END)
+                        ),
                         1.0
-                    ) AS score,
+                   ) AS score,
                    COALESCE(ARRAY_AGG(t.name) FILTER (WHERE t.name IS NOT NULL), '{{}}') as tags
             FROM documents d
             LEFT JOIN document_tags dt ON d.id = dt.document_id

@@ -9,6 +9,7 @@ export default defineConfig({
     port: 5173,      // Vite 預設 Port
     watch: {
       usePolling: true // Windows Docker 有時候需要這個才能熱更新
-    }
+    },
+    allowedHosts: ['.ngrok-free.app']
   }
 })
