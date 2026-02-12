@@ -15,6 +15,7 @@ env/
 backend-ai/models/
 *.pkl
 hf_cache/
+uploads/
 
 # 4. 忽略 Docker 掛載的資料庫數據
 retail_pg_data/

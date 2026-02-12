@@ -26,16 +26,30 @@ services:
     volumes:
       # [重要] 掛載模型資料夾：容器裡訓練好的 .pkl 會直接出現在你 Windows 裡
       - ./backend-ai/models:/app/models
-      # [重要] 掛載 Hugging Face 的快取資料夾，避免每次重建容器都要重新下載模型
+      # 掛載 Hugging Face 的快取資料夾，避免每次重建容器都要重新下載模型
       - ./backend-ai/hf_cache:/root/.cache/huggingface
+      # 掛載上傳資料夾，讓使用者上傳的檔案也能在容器裡被處理
+      - ./uploads:/app/static/uploads
     environment:
-      # 告訴 Python 連線字串 (注意 host 是 'db'，密碼是 '000')
       DATABASE_URL: postgresql://admin:000@db:5432/retail_ops
     depends_on:
       - db                       # 確保資料庫先啟動
     networks:
       - retail_network
 
+  # 前端介面 (React + Vite)
+  frontend:
+    build: ./frontend
+    container_name: retail_frontend
+    ports:
+      - "5173:5173"  # Vite 預設 port
+    volumes:
+      - ./frontend:/app           # 讓你在本機改 Code，容器內馬上變 (熱更新)
+      - /app/node_modules         # 避免本機的 node_modules 蓋掉容器內的
+    environment:
+      VITE_API_URL: "http://localhost:8000" 
+    networks:
+      - retail_network
 networks:
   retail_network:
     driver: bridge

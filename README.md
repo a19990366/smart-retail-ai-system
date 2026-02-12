@@ -31,8 +31,5 @@ docker-compose exec backend-ai python scripts/generate_fake_data.py
 # 訓練銷量預測模型
 docker-compose exec backend-ai python train.py
 
-# 注入 RAG 知識庫向量
-docker-compose exec backend-ai python ingest.py
-
 # 開啟測試API
 http://127.0.0.1:8000/docs

@@ -12,6 +12,13 @@ RUN apt-get update && apt-get install -y \
 
 # 複製 requirements.txt 並安裝 Python 套件
 COPY requirements.txt .
+
+# ==========================================
+# [關鍵] 強制安裝 CPU 版 PyTorch，拒絕 NVIDIA 顯卡驅動
+# ==========================================
+RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+# 這裡再安裝剩下的，因為 torch 已經裝好了，它會自動跳過 gpu 版
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 複製剩下的程式碼 (main.py, train.py 等)

@@ -8,3 +8,5 @@ joblib
 scikit-learn
 holidays
 sentence-transformers
+python-multipart
+aiofiles
