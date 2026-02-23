@@ -54,9 +54,8 @@ docker-compose up -d --build
 ```
 
 ### 2. 準備測試數據
-- 知識庫數據：執行 generate_fake_data.py 或透過網頁介面「內容管理」新增。
 - 銷量數據：執行 generate_mock_sales.py 產生 CSV，並透過網頁「銷量預測」分頁上傳。
 
 ### 3. 開啟介面
-- 端網頁：http://localhost:5173
+- 前端網頁：http://localhost:5173
 - API 文件：http://localhost:8000/docs

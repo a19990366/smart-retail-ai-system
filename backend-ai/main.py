@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import shutil
 import uuid
@@ -367,14 +368,23 @@ def predict_sales(req: PredictRequest):
         # 1. 載入模型
         m = joblib.load(model_path)
         
-        # 2. 建立未來日期
-        future = m.make_future_dataframe(periods=req.days)
+        # 2. 計算日期落差，確保未來日期包含今天到預測天數的範圍
+        last_date = m.history['ds'].max()
+        today = pd.to_datetime(datetime.now().date())
+        if today > last_date:
+            gap_days = (today - last_date).days
+            total_periods = gap_days + req.days
+        else:
+            total_periods = req.days
+
+        future = m.make_future_dataframe(periods=total_periods)
         
         # 3. 預測
         forecast = m.predict(future)
         
         # 4. 取出結果 (只取未來的資料)
-        result = forecast[['ds', 'yhat']].tail(req.days)
+        result = forecast[forecast['ds'] > last_date] # 先排除歷史訓練區間
+        result = result[result['ds'] >= today].head(req.days)
         
         # 格式化回傳
         data = []
